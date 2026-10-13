@@ -34,6 +34,10 @@ public class BusinessService {
             throw new IllegalArgumentException("Working date cannot be null.");
         }
 
+        if (newWorkingDate.isAfter(LocalDate.now())) {
+            throw new IllegalArgumentException("Working date cannot be in the future.");
+        }
+
         Business business = businessRepository.findById(businessId)
                 .orElseThrow(() -> new IllegalArgumentException("Business not found for ID: " + businessId));
 
