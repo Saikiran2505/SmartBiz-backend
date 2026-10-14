@@ -1,4 +1,3 @@
-```dockerfile
 FROM maven:3.9-eclipse-temurin-21-alpine AS builder
 
 WORKDIR /app
@@ -22,4 +21,3 @@ USER smartbiz
 EXPOSE 8080
 
 ENTRYPOINT ["sh", "-c", "java -XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -Dserver.port=${PORT:-8080} -jar app.jar"]
-```
