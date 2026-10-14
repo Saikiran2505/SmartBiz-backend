@@ -1,3 +1,4 @@
+```java
 package com.smartbiz.config;
 
 import com.zaxxer.hikari.HikariDataSource;
@@ -17,61 +18,78 @@ import java.nio.charset.StandardCharsets;
 @Configuration
 public class DataSourceConfig {
 
-    private static final Logger log = LoggerFactory.getLogger(DataSourceConfig.class);
+    private static final Logger log =
+            LoggerFactory.getLogger(DataSourceConfig.class);
 
     @Bean
     @Primary
     public DataSource dataSource(DataSourceProperties properties) {
+
         String databaseUrl = System.getenv("DATABASE_URL");
 
-        // Render, Railway, and Heroku provide DATABASE_URL in postgres:// or postgresql:// URI format
-        if (StringUtils.hasText(databaseUrl) && (databaseUrl.startsWith("postgres://") || databaseUrl.startsWith("postgresql://"))) {
+        if (StringUtils.hasText(databaseUrl)
+                && (databaseUrl.startsWith("postgres://")
+                || databaseUrl.startsWith("postgresql://"))) {
+
             try {
-                log.info("Detected postgres:// / postgresql:// in DATABASE_URL environment variable. Configuring DataSource for Render PostgreSQL...");
-
-                String normalizedUrl = databaseUrl;
-                if (normalizedUrl.startsWith("postgres://")) {
-                    normalizedUrl = "postgresql://" + normalizedUrl.substring("postgres://".length());
-                }
-
-                URI uri = new URI(normalizedUrl);
-                String userInfo = uri.getUserInfo();
-                String username = properties.getUsername();
-                String password = properties.getPassword();
-
-                if (StringUtils.hasText(userInfo) && userInfo.contains(":")) {
-                    String[] parts = userInfo.split(":", 2);
-                    username = URLDecoder.decode(parts[0], StandardCharsets.UTF_8);
-                    password = URLDecoder.decode(parts[1], StandardCharsets.UTF_8);
-                }
+                URI uri = new URI(databaseUrl);
 
                 String host = uri.getHost();
                 int port = uri.getPort() > 0 ? uri.getPort() : 5432;
-                String path = uri.getPath(); // includes leading '/'
+                String path = uri.getPath();
                 String query = uri.getQuery();
 
-                String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + path;
-                if (StringUtils.hasText(query)) {
-                    jdbcUrl += "?" + query;
-                } else if (host != null && host.contains("render.com")) {
-                    // Render external host requires sslmode=require
-                    jdbcUrl += "?sslmode=require";
+                String username = properties.getUsername();
+                String password = properties.getPassword();
+
+                String userInfo = uri.getRawUserInfo();
+
+                if (StringUtils.hasText(userInfo)
+                        && userInfo.contains(":")) {
+                    String[] parts = userInfo.split(":", 2);
+
+                    username = URLDecoder.decode(
+                            parts[0], StandardCharsets.UTF_8);
+                    password = URLDecoder.decode(
+                            parts[1], StandardCharsets.UTF_8);
                 }
 
-                log.info("Configured PostgreSQL JDBC URL: jdbc:postgresql://{}:{}{}", host, port, path);
+                if (!StringUtils.hasText(host)
+                        || !StringUtils.hasText(path)
+                        || path.equals("/")) {
+                    throw new IllegalArgumentException(
+                            "DATABASE_URL must contain a database name");
+                }
+
+                String jdbcUrl = "jdbc:postgresql://"
+                        + host + ":" + port + path;
+
+                if (StringUtils.hasText(query)) {
+                    jdbcUrl += "?" + query;
+                } else {
+                    jdbcUrl += "?sslmode=require";
+                }
 
                 HikariDataSource dataSource = new HikariDataSource();
                 dataSource.setDriverClassName("org.postgresql.Driver");
                 dataSource.setJdbcUrl(jdbcUrl);
                 dataSource.setUsername(username);
                 dataSource.setPassword(password);
+
+                log.info("Configured PostgreSQL datasource for host {}",
+                        host);
+
                 return dataSource;
+
             } catch (Exception e) {
-                log.error("Failed to parse DATABASE_URL: {}. Falling back to standard Spring datasource properties.", e.getMessage(), e);
+                throw new IllegalStateException(
+                        "Could not configure PostgreSQL from DATABASE_URL. "
+                        + "Check the Render database URL and credentials.", e);
             }
         }
 
-        // Standard configuration (local MySQL, explicit SPRING_DATASOURCE_URL, etc.)
+        log.info("Using standard Spring datasource configuration");
         return properties.initializeDataSourceBuilder().build();
     }
 }
+```
