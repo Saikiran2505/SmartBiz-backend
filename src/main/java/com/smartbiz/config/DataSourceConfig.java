@@ -1,4 +1,4 @@
-```java
+
 package com.smartbiz.config;
 
 import com.zaxxer.hikari.HikariDataSource;
@@ -46,10 +46,12 @@ public class DataSourceConfig {
 
                 if (StringUtils.hasText(userInfo)
                         && userInfo.contains(":")) {
+
                     String[] parts = userInfo.split(":", 2);
 
                     username = URLDecoder.decode(
                             parts[0], StandardCharsets.UTF_8);
+
                     password = URLDecoder.decode(
                             parts[1], StandardCharsets.UTF_8);
                 }
@@ -57,6 +59,7 @@ public class DataSourceConfig {
                 if (!StringUtils.hasText(host)
                         || !StringUtils.hasText(path)
                         || path.equals("/")) {
+
                     throw new IllegalArgumentException(
                             "DATABASE_URL must contain a database name");
                 }
@@ -71,12 +74,14 @@ public class DataSourceConfig {
                 }
 
                 HikariDataSource dataSource = new HikariDataSource();
+
                 dataSource.setDriverClassName("org.postgresql.Driver");
                 dataSource.setJdbcUrl(jdbcUrl);
                 dataSource.setUsername(username);
                 dataSource.setPassword(password);
 
-                log.info("Configured PostgreSQL datasource for host {}",
+                log.info(
+                        "Configured PostgreSQL datasource for host {}",
                         host);
 
                 return dataSource;
@@ -84,12 +89,13 @@ public class DataSourceConfig {
             } catch (Exception e) {
                 throw new IllegalStateException(
                         "Could not configure PostgreSQL from DATABASE_URL. "
-                        + "Check the Render database URL and credentials.", e);
+                                + "Check the Render database URL and credentials.",
+                        e);
             }
         }
 
         log.info("Using standard Spring datasource configuration");
+
         return properties.initializeDataSourceBuilder().build();
     }
 }
-```
